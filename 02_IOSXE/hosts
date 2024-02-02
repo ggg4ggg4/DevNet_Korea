@@ -1,0 +1,9 @@
+[all:vars]
+ansible_connection= ansible.netcommon.network_cli
+ansible_user = admin
+ansible_password = C1sco12345
+ansible_network_os = ios
+
+[switches]
+cat9k-1
+cat9k-2

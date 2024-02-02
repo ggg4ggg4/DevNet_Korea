@@ -1,0 +1,44 @@
+- hosts: cat9k-1
+  connection: network_cli
+  gather_facts: no
+  roles:
+    - ansible-pyats
+  tasks:
+    - name: Get Interface Info
+      pyats_parse_command:
+        command: show interfaces summary
+      register: interface_summary_output
+
+    - name: show interface Info - stdout
+      debug: 
+        msg: "{{ interface_summary_output.stdout_lines }}"
+
+    - name: show interface Info - parsed verion
+      debug: 
+        msg: "{{ interface_summary_output.structured }}"
+
+    # - name: Save the up interface Info 
+    #   set_fact:
+    #     up_interface_output: "{{ interface_summary_output.structured | json_query('interfaces.[*][0][?up==`true`]')}}"
+      
+    # - name: PRint the up interface Info 
+    #   debug:
+    #     var: up_interface_output | length
+
+    - name: Save the Interfaces which has the word 'Ethernet' in their names 
+      set_fact:
+        ethernet_interface_list: "{{ interface_summary_output.structured | json_query('interfaces.[*][0][?contains(name,`Ethernet`)]')}}"
+
+    # - name: Save the up interface Info 
+    #   debug:
+    #     msg: "{{ interface_summary_output.structured | json_query('interfaces.[*][0][?contains(name,`Ethernet`) && up==`true`]')}}"
+
+    - name: Save the up interface Info 
+      set_fact:
+        up_ethernet_interface_list: "{{ ethernet_interface_list | json_query('[?up==`true`]')}}"
+  
+    - name: Print the number of the interfaces which has the word 'Ethernet' in their names 
+      debug: 
+        msg:    
+          - "Total number of Interfaces : {{ ethernet_interface_list | length }}"         
+          - "Total number of Up Interfaces : {{ up_ethernet_interface_list | length }}"
