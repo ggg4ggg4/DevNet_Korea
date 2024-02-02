@@ -1,0 +1,19 @@
+Interface,admin_state,oper_status,link_state,mac_address,in_crc_errors
+{% for item in range(1, 65) %}
+Ethernet1/{{ item }},{{ output.structured['Ethernet1/' + item|string].admin_state }},{{ output.structured['Ethernet1/' + item|string].oper_status }},{{ output.structured['Ethernet1/' + item|string].link_state }},{{ output.structured['Ethernet1/' + item|string].mac_address }},{{ output.structured['Ethernet1/' + item|string].counters.in_crc_errors }}
+{% endfor %}
+
+Hostname: {{ version.structured.platform.hardware.device_name }}
+Version: {{ version.structured.platform.software.system_version }}
+Model: {{ version.structured.platform.hardware.model }}
+OS: {{ version.structured.platform.os }}
+
+CPU Usage (last 5 minutes): {{ cpu.structured.five_min_cpu }}%
+Memory Total: {{ memory.structured.memory_usage.memory_usage_total_kb }}KB
+Available Memory: {{ memory.structured.memory_usage.memory_usage_free_kb }}KB
+Unavailable Memory: {{ memory.structured.memory_usage.memory_usage_used_kb }}KB
+
+Redundancy State: {{ redundancy.structured.redundancy_mode.operational }}
+Active Supervisor Time: {{ redundancy.structured.active_supervisor_time }}
+
+Routing total routes: {{route.structured.vrf.default.total_routes }}
