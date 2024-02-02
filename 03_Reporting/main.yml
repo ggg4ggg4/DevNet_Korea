@@ -1,0 +1,127 @@
+---
+- name: Gather interface facts from Cisco NXOS devices
+  hosts: nxos
+  gather_facts: no
+  roles:
+    - ansible-pyats
+  tasks:
+    - name: Device information (기기명, 버전명, 모델명, OS 출력) # 작업의 이름을 정의합니다.
+      pyats_parse_command: # 아래의 코드는 주석 처리되어 있습니다. 이 코드는 각 인터페이스의 mode를 출력합니다.
+        command: show version # 실행할 명령을 정의합니다.
+      register: version # 명령의 결과를 'version' 변수에 저장합니다.
+
+    - debug: # debug 모듈을 사용하여 디버깅 메시지를 출력합니다.
+        msg: # 출력할 메시지(호스트 정보, 장비 버전, 모델명, OS)를 정의합니다.
+          - "Hostname: {{ version.structured.platform.hardware.device_name }}"
+          - "Version: {{ version.structured.platform.software.system_version }}"
+          - "Model: {{ version.structured.platform.hardware.model }}"
+          - "OS: {{ version.structured.platform.os }}"
+
+    - name: CPU 5분 평균 사용률 출력
+      pyats_parse_command:
+        command: show processes cpu
+      register: cpu # 명령의 결과를 'cpu' 변수에 저장합니다.
+
+      # 이 코드는 주석 처리되어 있습니다. 이 코드는 debug 모듈을 사용하여 CPU관련 디버깅 메시지를 출력합니다.
+#    - debug:
+#        var: cpu.structured
+
+    - debug:
+        msg:
+          - "CPU: {{ cpu.structured.five_min_cpu }}%"
+
+    - name: 메모리 사용량 출력
+      pyats_parse_command:
+        command: show system resources
+      register: memory
+
+  #  - debug:
+  #      var: memory.structured
+
+    - debug:
+        msg:
+          - "메모리 전체량: {{ memory.structured.memory_usage.memory_usage_total_kb }}%"
+          - "메모리 사용 가능량: {{ memory.structured.memory_usage.memory_usage_free_kb }}"
+          - "메모리 사용 불가능량: {{ memory.structured.memory_usage.memory_usage_used_kb }}"
+   
+
+
+    - name: Redundancy 상태 체크
+      pyats_parse_command:
+        command: show redundancy status
+      register: redundancy
+
+    - debug:
+        msg:
+          - "Redundancy 상태: {{ redundancy.structured.redundancy_mode.operational }}"
+          - "active supervisor 시간: {{ redundancy.structured.active_supervisor_time }}"
+     
+
+    - name: Routing table information
+      pyats_parse_command:
+        command:  show ip route summary 
+      register: route
+
+    - debug:
+        msg: 
+          - "총 라우팅 테이블 수는 {{ route.structured.vrf.default.total_routes }} 입니다."
+         
+    # 'show interface' 명령을 실행하고 그 결과를 'output' 변수에 저장합니다.
+    - name: Interface information
+      pyats_parse_command:
+        command:  show interface 
+      register: output  # 'output' 변수에 'show interface' 명령의 결과를 저장합니다.
+    # 'Ethernet1/1' 인터페이스의 정보를 'interface_info' 변수에 저장합니다.
+    - name: Save interface information to a variable (1개 인터페이스의 정보를 csv로 저장)
+      set_fact:
+        interface_info: "{{ output.structured['Ethernet1/1'] }}" # 'interface_info' 변수에 'Ethernet1/1' 인터페이스의 정보를 저장합니다.
+
+    - debug:
+        var: interface_info
+
+    - name: Generate CSV file 
+      template:
+        src: templates/interface_info.j2
+        dest: interface_info.csv
+
+    - name: Save interface information to a variable (여러개 인터페이스의 정보를 csv로 저장)
+      set_fact:
+        interfaces: "{{ output.structured }}"
+
+    - name: Generate CSV_multi_interface file
+      template:
+        src: templates/multi_interface_info.j2
+        dest: multi_interface_info.csv
+
+# Cisco Webex Teams에 메시지를 보내는 작업을 정의합니다.
+    - name: Cisco Webex Teams - Text Message to a Room
+      community.general.cisco_webex:
+        recipient_type: roomId # 수신자 유형을 roomId로 설정합니다.
+        recipient_id: "Y2lzY29zcGFyazovL3VzL1JPT0"  #token for room ID
+        msg_type: text         # 메시지 유형을 text로 설정합니다.
+        personal_token: "NTM2Nzk5MmEtMTAwNi00MjU0LThkNzMtYTNhM2FiMWRkYzAzYjhiYTNlZWQ"  # Webex에서 본인의 ID 토큰을 설정합니다.
+        msg: 
+          - "Hostname: {{ version.structured.platform.hardware.device_name }}"
+          - "Version: {{ version.structured.platform.software.system_version }}"
+          - "Model: {{ version.structured.platform.hardware.model }}"
+          - "OS: {{ version.structured.platform.os }}"
+          - "CPU: {{ cpu.structured.five_min_cpu }}%"
+          - "메모리 전체량: {{ memory.structured.memory_usage.memory_usage_total_kb }}%"
+          - "메모리 사용 가능량: {{ memory.structured.memory_usage.memory_usage_free_kb }}"
+          - "메모리 사용 불가능량: {{ memory.structured.memory_usage.memory_usage_used_kb }}"
+          - "Redundancy 상태: {{ redundancy.structured.redundancy_mode.operational }}"
+          - "active supervisor 시간: {{ redundancy.structured.active_supervisor_time }}"
+          - "총 라우팅 테이블 수는 {{ route.structured.vrf.default.total_routes }} 입니다."
+
+    - name: Read CSV file
+      command: cat ./path/multi_interface_info.csv
+      register: csv_data
+
+# Cisco Webex Teams에 메시지를 보내는 작업을 정의합니다.
+    - name: Cisco Webex Teams - Text Message to a Room
+      community.general.cisco_webex: # community.general.cisco_webex 모듈을 사용합니다.
+        recipient_type: roomId       # 수신자 유형을 roomId로 설정합니다.
+        recipient_id: "Y2lzY29zcGFyazovL3VzL1JPT00vZWY0MmE0MTAtN2NkZS0xMWVlLTg3MGQtMDM0MTYwZmMyMmEx" 
+        msg_type: text               # 메시지 유형을 text로 설정합니다.
+        personal_token: "NTM2Nzk5MmEtMTAwNi00MjU0LThkNzMtYTNhM2FiMWRkYzAzYjhiYTNlZWQtMGU2_PF84_1eb65fdf-9643-417f-9974-ad72cae0e10f"
+        msg: "{{ csv_data.stdout }}" # 보낼 메시지를 설정합니다. 여기서는 csv_data.stdout 변수의 값을 사용합니다.
