@@ -1,0 +1,12 @@
+- hosts: switches
+  gather_facts: no
+
+  tasks:
+    - name: 1. show version 커맨드 결과값 가져오기 (Get the output of the command 'show version')
+      cisco.ios.ios_command:
+        commands: show version
+      register: command_output
+    
+    - name: 2. 커맨드 아웃풋 보여주기 (Print out the variable command_output)
+      debug:
+        var: command_output

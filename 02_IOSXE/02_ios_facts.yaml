@@ -1,0 +1,15 @@
+- hosts: switches
+  gather_facts: no
+
+  tasks:
+    - name: 1. ios facts 데이터 가져오기 (retrieve ios facts)
+      cisco.ios.ios_facts:
+        gather_subset: all
+
+    - name: 2. 호스트네임 & 시리얼 넘버 보여주기 (Print out the hostname and serial number)
+      debug:
+        msg: "Hostname is {{ ansible_net_hostname }} and the Serial Number is {{ ansible_net_serialnum }}"
+    
+    - name: 3. 인터페이스 정보 보여주기 (Print out interface Information)
+      debug:
+        var: ansible_net_interfaces
