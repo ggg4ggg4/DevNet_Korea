@@ -1,0 +1,7 @@
+    - name: Gather only the interfaces resource facts and no legacy facts
+      cisco.nxos.nxos_facts:
+        gather_subset:
+          - "!all"
+          - "!min"
+        gather_network_resources:
+          - interfaces
